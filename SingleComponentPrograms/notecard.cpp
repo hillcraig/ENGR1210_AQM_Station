@@ -170,8 +170,8 @@ void Send_Data()
       JAddStringToObject(body, "ss", ss);
 
       // Add a funny string and number
-      JAddStringToObject(body, "message", "banana");  // Add string "banana"
-      JAddNumberToObject(body, "funny_number", 42.42);  // Add a funny number
+      JAddStringToObject(body, "a_message", "banana");  
+      JAddNumberToObject(body, "a_number", 42.42);  
     }
 
     notecard.sendRequest(req);  // Send the request to the Notecard
