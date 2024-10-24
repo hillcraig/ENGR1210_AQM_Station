@@ -6,7 +6,7 @@
 #include <Adafruit_INA260.h> 
 #include <Adafruit_AHTX0.h> 
 
-#define productUID "edu.umn.d.cshill:engr_1210_fall_2024y"  // Product UID for Notecard
+#define productUID "edu.umn.d.cshill:engr_1210_fall_2024"  // Product UID for Notecard
 
 // Object declarations for the Notecard and sensors
 Notecard notecard;

@@ -1,8 +1,10 @@
 #include <Arduino.h>
-#include <time.h> 
 #include <Notecard.h>
+#include <Adafruit_PM25AQI.h> 
+#include <Adafruit_INA260.h> 
+#include <Adafruit_AHTX0.h> 
 
-#define productUID "edu.umn.d.cshill:engr_1210_fall_2024y"  // Product UID for Notecard
+#define productUID "edu.umn.d.cshill:engr_1210_fall_2024"  // Product UID for Notecard
 
 // Object declaration for the Notecard
 Notecard notecard;
@@ -169,7 +171,7 @@ void Send_Data()
       JAddStringToObject(body, "mm", mm);
       JAddStringToObject(body, "ss", ss);
 
-      // Add a funny string and number
+      // sample string and number
       JAddStringToObject(body, "a_message", "banana");  
       JAddNumberToObject(body, "a_number", 42.42);  
     }

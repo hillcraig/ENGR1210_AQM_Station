@@ -1,5 +1,8 @@
 #include <Arduino.h>
-#include <Adafruit_INA260.h>
+#include <Notecard.h>
+#include <Adafruit_PM25AQI.h> // Air Quality Sensor
+#include <Adafruit_INA260.h> // Voltage, Current, Power Sensor
+#include <Adafruit_AHTX0.h> // Air Temperature and Humidity Sensor
 
 // Object declaration for the INA260 sensor
 Adafruit_INA260 ina260;
@@ -8,6 +11,10 @@ Adafruit_INA260 ina260;
 float current;
 float voltage;
 float power;
+
+// Function prototypes
+void Print_Data();
+void Read_INA260();
 
 void setup()
 {

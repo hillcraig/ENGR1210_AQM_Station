@@ -1,5 +1,8 @@
 #include <Arduino.h>
-#include <Adafruit_AHTX0.h>
+#include <Notecard.h>
+#include <Adafruit_PM25AQI.h> // Air Quality Sensor
+#include <Adafruit_INA260.h> // Voltage, Current, Power Sensor
+#include <Adafruit_AHTX0.h> // Air Temperature and Humidity Sensor
 
 // Object declaration for the AHTX0 sensor
 Adafruit_AHTX0 aht;
@@ -7,6 +10,10 @@ Adafruit_AHTX0 aht;
 // Variables to store temperature and humidity
 float temperature;
 float humidity;
+
+// Function prototypes
+void Read_AHTX0();
+void Print_Data();
 
 void setup()
 {

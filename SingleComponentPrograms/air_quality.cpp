@@ -1,5 +1,8 @@
 #include <Arduino.h>
-#include <Adafruit_PM25AQI.h>
+#include <Notecard.h>
+#include <Adafruit_PM25AQI.h> // Air Quality Sensor
+#include <Adafruit_INA260.h> // Voltage, Current, Power Sensor
+#include <Adafruit_AHTX0.h> // Air Temperature and Humidity Sensor
 
 // Object declaration for the PM2.5 AQI sensor
 Adafruit_PM25AQI aqi;
@@ -8,6 +11,10 @@ Adafruit_PM25AQI aqi;
 float pm10;
 float pm25;
 float pm100;
+
+// Function prototypes
+void Read_PM25AQI();
+void Print_Data();
 
 void setup()
 {

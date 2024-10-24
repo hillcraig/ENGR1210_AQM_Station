@@ -1,16 +1,17 @@
 #include <Arduino.h>
 #include <Notecard.h>
-#include <Adafruit_PM25AQI.h> // Air Quality Sensor
-#include <Adafruit_INA260.h> // Voltage, Current, Power Sensor
-#include <Adafruit_AHTX0.h> // Air Temperature and Humidity Sensor
+#include <Adafruit_PM25AQI.h>   // Air Quality Sensor
+#include <Adafruit_INA260.h>    // Voltage, Current, Power Sensor
+#include <Adafruit_AHTX0.h>     // Air Temperature and Humidity Sensor
 
-#define productUID "com.gmail.liamgaeuman:environmental_monitoring_buoy" 
+#define productUID "edu.umn.d.cshill:engr_1210_fall_2024"
 
 #define NOTECARD 1
 #define AHTX0 1
 #define PM25AQI 1
 #define INA260 1
 
+// Function prototypes
 void read_AHTX0();
 void read_INA260();
 void read_Notecard();
@@ -33,37 +34,40 @@ void setup() {
   // Wait for serial monitor to open
   delay(2000);
   Serial.begin(115200);
-  
+
 #if NOTECARD
   notecard.setDebugOutputStream(Serial);
 #endif
 
 #if AHTX0
-  if (! aht.begin()) {
+  if (!aht.begin()) {
     Serial.println("Could not find AHTX0 sensor!");
-    while (1);
+    while (1);  // Halt if sensor not found
   }
-  Serial.println("AHTX0 found!");
+  Serial.println("AHTX0 sensor initialized!");
 #endif
 
 #if PM25AQI
-  if (! aqi.begin_I2C()) {     
-    Serial.println("Could not find PM 2.5 sensor!");
-    while (1);
+  if (!aqi.begin_I2C()) {
+    Serial.println("Could not find PM2.5 sensor!");
+    while (1);  // Halt if sensor not found
   }
-  Serial.println("PM25 found!");
+  Serial.println("PM2.5 sensor initialized!");
 #endif
+
 #if INA260
   if (!ina260.begin()) {
     Serial.println("Couldn't find INA260 sensor!");
-    while (1);
+    while (1);  // Halt if sensor not found
   }
-  Serial.println("INA260 found!");
+  Serial.println("INA260 sensor initialized!");
 #endif
+
 #if NOTECARD
   notecard.begin();
 
-  {  
+  // Configure Notecard settings
+  {
     J *req = notecard.newRequest("hub.set");
     JAddStringToObject(req, "product", productUID);
     JAddStringToObject(req, "mode", "periodic");
@@ -74,8 +78,8 @@ void setup() {
     }
   }
 
+  // Set AUX1 mode for DFU
   {
-    // Pull AUX1 low during DFU
     J *req = notecard.newRequest("card.aux");
     JAddStringToObject(req, "mode", "dfu");
     if (!notecard.sendRequest(req)) {
@@ -83,6 +87,7 @@ void setup() {
     }
   }
 
+  // Set location mode to periodic updates
   {
     J *req = notecard.newRequest("card.location.mode");
     JAddStringToObject(req, "mode", "periodic");
@@ -98,39 +103,42 @@ void setup() {
 
 void loop() {
 #if NOTECARD
-  read_Notecard();  // read lat lon
+  read_Notecard();  // Read latitude and longitude from Notecard
 #endif
 #if PM25AQI
-  read_PM25AQI();  // read air quality
+  read_PM25AQI();   // Read air quality data
 #endif
 #if INA260
-  read_INA260();  // read current, voltage, and power
+  read_INA260();    // Read current, voltage, and power data
 #endif
 #if AHTX0
-  read_AHTX0();  // read humidity and temp
+  read_AHTX0();     // Read humidity and temperature data
 #endif
-  delay(2000);  // meow meow
+  delay(2000);  // Wait before next loop iteration
 }
 
 #if AHTX0
-void read_AHTX0()
-{
+void read_AHTX0() {
   sensors_event_t humidity, temp;
-  aht.getEvent(&humidity, &temp);// populate temp and humidity objects with fresh data
-  Serial.print("Temperature: "); Serial.print(temp.temperature); Serial.println(" degrees C");
-  Serial.print("Humidity: "); Serial.print(humidity.relative_humidity); Serial.println("% rH");
+  aht.getEvent(&humidity, &temp);  // Get new data from AHTX0 sensor
+
+  Serial.print("Temperature: ");
+  Serial.print(temp.temperature);
+  Serial.println(" °C");
+
+  Serial.print("Humidity: ");
+  Serial.print(humidity.relative_humidity);
+  Serial.println("% rH");
 }
 #endif
 
 #if PM25AQI
-void read_PM25AQI()
-{
-  //Air Quality Sensor
+void read_PM25AQI() {
   PM25_AQI_Data data;
-  
-  if (! aqi.read(&data)) {
-    Serial.println("Could not read from AQI");
-    delay(500);  // try again in a bit!
+
+  if (!aqi.read(&data)) {
+    Serial.println("Could not read from AQI sensor");
+    delay(500);  // Try again after a short delay
     return;
   }
 
@@ -138,28 +146,41 @@ void read_PM25AQI()
   Serial.println(F("---------------------------------------"));
   Serial.println(F("Concentration Units (standard)"));
   Serial.println(F("---------------------------------------"));
-  Serial.print(F("PM 1.0: ")); Serial.print(data.pm10_standard);
-  Serial.print(F("\t\tPM 2.5: ")); Serial.print(data.pm25_standard);
-  Serial.print(F("\t\tPM 10: ")); Serial.println(data.pm100_standard);
+  Serial.print(F("PM 1.0: "));
+  Serial.print(data.pm10_standard);
+  Serial.print(F("\tPM 2.5: "));
+  Serial.print(data.pm25_standard);
+  Serial.print(F("\tPM 10: "));
+  Serial.println(data.pm100_standard);
+
   Serial.println(F("Concentration Units (environmental)"));
   Serial.println(F("---------------------------------------"));
-  Serial.print(F("PM 1.0: ")); Serial.print(data.pm10_env);
-  Serial.print(F("\t\tPM 2.5: ")); Serial.print(data.pm25_env);
-  Serial.print(F("\t\tPM 10: ")); Serial.println(data.pm100_env);
+  Serial.print(F("PM 1.0: "));
+  Serial.print(data.pm10_env);
+  Serial.print(F("\tPM 2.5: "));
+  Serial.print(data.pm25_env);
+  Serial.print(F("\tPM 10: "));
+  Serial.println(data.pm100_env);
+
   Serial.println(F("---------------------------------------"));
-  Serial.print(F("Particles > 0.3um / 0.1L air:")); Serial.println(data.particles_03um);
-  Serial.print(F("Particles > 0.5um / 0.1L air:")); Serial.println(data.particles_05um);
-  Serial.print(F("Particles > 1.0um / 0.1L air:")); Serial.println(data.particles_10um);
-  Serial.print(F("Particles > 2.5um / 0.1L air:")); Serial.println(data.particles_25um);
-  Serial.print(F("Particles > 5.0um / 0.1L air:")); Serial.println(data.particles_50um);
-  Serial.print(F("Particles > 10 um / 0.1L air:")); Serial.println(data.particles_100um);
+  Serial.print(F("Particles > 0.3µm / 0.1L air: "));
+  Serial.println(data.particles_03um);
+  Serial.print(F("Particles > 0.5µm / 0.1L air: "));
+  Serial.println(data.particles_05um);
+  Serial.print(F("Particles > 1.0µm / 0.1L air: "));
+  Serial.println(data.particles_10um);
+  Serial.print(F("Particles > 2.5µm / 0.1L air: "));
+  Serial.println(data.particles_25um);
+  Serial.print(F("Particles > 5.0µm / 0.1L air: "));
+  Serial.println(data.particles_50um);
+  Serial.print(F("Particles > 10µm / 0.1L air: "));
+  Serial.println(data.particles_100um);
   Serial.println(F("---------------------------------------"));
 }
 #endif
 
 #if INA260
-void read_INA260()
-{
+void read_INA260() {
   Serial.print("Current: ");
   Serial.print(ina260.readCurrent());
   Serial.println(" mA");
@@ -173,52 +194,48 @@ void read_INA260()
   Serial.println(" mW");
 
   Serial.println();
-  delay(1000);
+  delay(1000);  // Short delay between readings
 }
 #endif
 
 #if NOTECARD
-void read_Notecard()
-{
+void read_Notecard() {
   size_t gps_time_s;
   double lat;
   double lon;
-  
+
+  // Get the last known GPS time
   {
-    // Save the time from the last location reading.
     J *rsp = notecard.requestAndResponse(notecard.newRequest("card.location"));
     gps_time_s = JGetInt(rsp, "time");
     NoteDeleteResponse(rsp);
   }
 
+  // Set location mode to continuous for immediate reading
   {
-    // Set the location mode to "continuous" mode to force the
-    // Notecard to take an immediate GPS/GNSS reading.
     J *req = notecard.newRequest("card.location.mode");
     JAddStringToObject(req, "mode", "continuous");
     notecard.sendRequest(req);
   }
 
-  // How many seconds to wait for a location before you stop looking
+  // Timeout after 10 minutes if location not acquired
   size_t timeout_s = 600;
 
-  // Block while resolving GPS/GNSS location
+  // Wait for GPS data to be available
   for (const size_t start_ms = ::millis();;) {
-    // Check for a timeout, and if enough time has passed, break out of the loop
-    // to avoid looping forever
     if (::millis() >= (start_ms + (timeout_s * 1000))) {
       Serial.println("Timed out looking for a location\n");
       break;
     }
-  
-    // Check if GPS/GNSS has acquired location information
+
+    // Check if new GPS data is available
     J *rsp = notecard.requestAndResponse(notecard.newRequest("card.location"));
     if (JGetInt(rsp, "time") != gps_time_s) {
       lat = JGetNumber(rsp, "lat");
       lon = JGetNumber(rsp, "lon");
       NoteDeleteResponse(rsp);
 
-      // Restore previous configuration
+      // Restore previous location mode settings
       {
         J *req = notecard.newRequest("card.location.mode");
         JAddStringToObject(req, "mode", "periodic");
@@ -226,20 +243,18 @@ void read_Notecard()
       }
       break;
     }
-  
-    // If a "stop" field is on the card.location response, it means the Notecard
-    // cannot locate a GPS/GNSS signal, so we break out of the loop to avoid looping
-    // endlessly
+
+    // If Notecard cannot find GPS signal
     if (JGetObjectItem(rsp, "stop")) {
-      Serial.println("Found a stop flag, cannot find location\n");
+      Serial.println("Cannot find location\n");
       break;
     }
-  
+
     NoteDeleteResponse(rsp);
-    // Wait 2 seconds before trying again
-    delay(2000);
+    delay(2000);  // Wait before retrying
   }
 
+  // Print the acquired GPS coordinates
   Serial.print("Module Latitude: ");
   Serial.println(lat);
   Serial.print("Module Longitude: ");
