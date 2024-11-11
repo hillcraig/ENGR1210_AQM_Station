@@ -171,9 +171,9 @@ void Send_Data()
       JAddStringToObject(body, "mm", mm);
       JAddStringToObject(body, "ss", ss);
 
-      // sample string and number
-      JAddStringToObject(body, "a_message", "banana");  
-      JAddNumberToObject(body, "a_number", 42.42);  
+      
+      JAddNumberToObject(body, "lat", lat);  
+      JAddNumberToObject(body, "lon", lon);  
     }
 
     notecard.sendRequest(req);  // Send the request to the Notecard
