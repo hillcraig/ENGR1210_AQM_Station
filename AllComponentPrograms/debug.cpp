@@ -61,6 +61,9 @@ void setup() {
     while (1);  // Halt if sensor not found
   }
   Serial.println("INA260 sensor initialized!");
+
+  // Set to average over 16 samples
+  ina260.setAveragingCount(INA260_COUNT_16); 
 #endif
 
 #if NOTECARD

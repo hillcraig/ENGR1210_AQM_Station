@@ -73,11 +73,11 @@ void loop()
   Notecard_Find_Location();
   Send_Data();
 
-  // Spin the CPU until 15 minutes (900,000 ms) have passed
-  while (millis() - startTime < 900000)
+  // Spin the CPU until 5 minutes (300,000 ms) have passed
+  while (millis() - startTime < 300000)
   {
-    // Busy-wait to ensure the loop runs for exactly 15 minutes
-  }
+    // Busy-wait to ensure the loop runs for exactly 5 minutes
+  } // Change to 15 minutes for deployment. 
 }
 
 void Notecard_Find_Location()

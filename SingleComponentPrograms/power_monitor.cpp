@@ -27,6 +27,9 @@ void setup()
     while (1);  // Stop the program if the sensor is not found
   }
   Serial.println("INA260 sensor found!");
+
+  // Set to average over 16 samples
+  ina260.setAveragingCount(INA260_COUNT_16);
 }
 
 void loop()
@@ -52,9 +55,9 @@ void Print_Data()
   Serial.print(current);
   Serial.println(" mA");
 
-  Serial.print("Voltage: ");
+  Serial.print("Bus Voltage: ");
   Serial.print(voltage);
-  Serial.println(" V");
+  Serial.println(" mV");
 
   Serial.print("Power: ");
   Serial.print(power);

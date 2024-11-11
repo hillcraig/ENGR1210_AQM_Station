@@ -40,9 +40,17 @@ float current;
 float voltage;
 float power;
 
-float pm10;
-float pm25;
-float pm100;
+// PM2.5 AQI sensor variables for standard and environmental particulate concentrations
+float pm10_standard, pm25_standard, pm100_standard;
+float pm10_env, pm25_env, pm100_env;
+
+// Variables to store particle counts
+uint16_t particles_03um;
+uint16_t particles_05um;
+uint16_t particles_10um;
+uint16_t particles_25um;
+uint16_t particles_50um;
+uint16_t particles_100um;
 
 void setup()
 {
@@ -71,6 +79,9 @@ void setup()
     while (1);  // Stop the program if the sensor is not found
   }
   Serial.println("INA260 found!");
+
+  // Set INA260 to average over 16 samples
+  ina260.setAveragingCount(INA260_COUNT_16);
 
   notecard.begin();  // Initialize the Notecard
 
@@ -118,10 +129,10 @@ void loop()
   Read_PM25AQI();
   Send_Data();
 
-  // Spin the CPU until 15 minutes (900,000 ms) have passed
-  while (millis() - startTime < 900000)
+  // Spin the CPU until 5 minutes (300,000 ms) have passed
+  while (millis() - startTime < 300000)
   {
-    // Busy-wait to ensure the loop runs for exactly 15 minutes
+    // Busy-wait to ensure the loop runs for exactly 5 minutes
   }
 }
 
@@ -196,12 +207,29 @@ void Read_INA260()
 void Read_PM25AQI()
 {
   PM25_AQI_Data data;
-  
-  aqi.read(&data);  // Read air quality data from PM2.5 AQI sensor
 
-  pm10 = data.pm10_standard;  // PM10 concentration
-  pm25 = data.pm25_standard;  // PM2.5 concentration
-  pm100 = data.pm100_standard;  // PM100 concentration
+  // Read air quality data from the PM2.5 AQI sensor
+  if (aqi.read(&data)) {
+    // Standard particulate matter concentrations
+    pm10_standard = data.pm10_standard;  // PM10 (standard)
+    pm25_standard = data.pm25_standard;  // PM2.5 (standard)
+    pm100_standard = data.pm100_standard;  // PM100 (standard)
+
+    // Environmental particulate matter concentrations
+    pm10_env = data.pm10_env;  // PM10 (environmental)
+    pm25_env = data.pm25_env;  // PM2.5 (environmental)
+    pm100_env = data.pm100_env;  // PM100 (environmental)
+
+    // Particle counts for different sizes
+    particles_03um = data.particles_03um;  // Particles > 0.3um / 0.1L air
+    particles_05um = data.particles_05um;  // Particles > 0.5um / 0.1L air
+    particles_10um = data.particles_10um;  // Particles > 1.0um / 0.1L air
+    particles_25um = data.particles_25um;  // Particles > 2.5um / 0.1L air
+    particles_50um = data.particles_50um;  // Particles > 5.0um / 0.1L air
+    particles_100um = data.particles_100um;  // Particles > 50um / 0.1L air
+  } else {
+    Serial.println("Failed to read from PM2.5 sensor!");
+  }
 }
 
 void Set_Time_Location(J *rsp)
@@ -231,7 +259,7 @@ void Send_Data()
   J *req = notecard.newRequest("note.add");  
   if (req != NULL)
   {
-    JAddStringToObject(req, "file", "sensors.qo");  // Store data in "sensors.qo" file
+    JAddStringToObject(req, "file", "data.qo");  // Store data in "sensors.qo" file
     JAddBoolToObject(req, "sync", true);  // Request immediate sync
     J *body = JAddObjectToObject(req, "body");
     if (body)
@@ -246,19 +274,30 @@ void Send_Data()
       JAddNumberToObject(body, "lat", lat);            
       JAddNumberToObject(body, "lon", lon);   
 
-      // Add sensor data
-      JAddNumberToObject(body, "temp", temperature);  // Add temperature data
-      JAddNumberToObject(body, "humidity", humidity);  // Add humidity data
+      // Add sensor data for temperature and humidity
+      JAddNumberToObject(body, "temperature", temperature);  // Temperature
+      JAddNumberToObject(body, "humidity", humidity);  // Humidity
 
-      // Add PM2.5 sensor data
-      JAddNumberToObject(body, "pm10", pm10);  // Add PM10 data
-      JAddNumberToObject(body, "pm25", pm25);  // Add PM2.5 data
-      JAddNumberToObject(body, "pm100", pm100);  // Add PM100 data
+      // Add PM2.5 AQI sensor data
+      JAddNumberToObject(body, "pm10_standard", pm10_standard);  // PM10 (standard)
+      JAddNumberToObject(body, "pm25_standard", pm25_standard);  // PM2.5 (standard)
+      JAddNumberToObject(body, "pm100_standard", pm100_standard);  // PM100 (standard)
+      JAddNumberToObject(body, "pm10_env", pm10_env);  // PM10 (environmental)
+      JAddNumberToObject(body, "pm25_env", pm25_env);  // PM2.5 (environmental)
+      JAddNumberToObject(body, "pm100_env", pm100_env);  // PM100 (environmental)
+
+      // Add particle counts for various sizes
+      JAddNumberToObject(body, "particles_03um", particles_03um);  // Particles > 0.3um
+      JAddNumberToObject(body, "particles_05um", particles_05um);  // Particles > 0.5um
+      JAddNumberToObject(body, "particles_10um", particles_10um);  // Particles > 1.0um
+      JAddNumberToObject(body, "particles_25um", particles_25um);  // Particles > 2.5um
+      JAddNumberToObject(body, "particles_50um", particles_50um);  // Particles > 5.0um
+      JAddNumberToObject(body, "particles_100um", particles_100um);  // Particles > 50um
 
       // Add INA260 sensor data (current, voltage, power)
-      JAddNumberToObject(body, "current", current);  // Add current data
-      JAddNumberToObject(body, "voltage", voltage);  // Add voltage data
-      JAddNumberToObject(body, "power", power);  // Add power data
+      JAddNumberToObject(body, "current", current);  // Current
+      JAddNumberToObject(body, "voltage", voltage);  // Voltage
+      JAddNumberToObject(body, "power", power);  // Power
     }
 
     notecard.sendRequest(req);  // Send the request to the Notecard
