@@ -9,7 +9,7 @@
 
 #define productUID "edu.umn.d.cshill:engr_1210_fall_2024"  // Product UID for Notecard
 
-#define DEBUG 0
+#define DEBUG 1
 
 #define INA260_MUX_PORT 0
 #define AHTX0_MUX_PORT 1
@@ -242,13 +242,15 @@ void Read_AHTX0()
 
   // Store the averaged values in global variables
   temperature = temperatureAvg;
+  temperature = (floor(100*temperature)/100);  // Truncate to 2 decimal places
   humidity = humidityAvg;
+  humidity = (floor(100*humidity)/100);  // Truncate to 2 decimal places
 
   // Debug output
   debugPrint("Averaged Temperature: ");
-  debugPrintln(temperatureAvg);
+  debugPrintln(temperature);
   debugPrint("Averaged Humidity: ");
-  debugPrintln(humidityAvg);
+  debugPrintln(humidity);
 }
 
 void Read_INA260()
