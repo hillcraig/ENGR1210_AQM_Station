@@ -341,21 +341,38 @@ void Read_PM25AQI()
   float particles50umAvg = particles50umSum / numReadings;
   float particles100umAvg = particles100umSum / numReadings;
 
+  // Store averages into variables
+  pm10_standard = pm10StandardAvg;
+  pm25_standard = pm25StandardAvg;
+  pm100_standard = pm100StandardAvg;
+
+  pm10_env = pm10EnvAvg;
+  pm25_env = pm25EnvAvg;
+  pm100_env = pm100EnvAvg;
+
+  // Convert float averages to uint16_t with rounding
+  particles_03um = (uint16_t)round(particles03umAvg);
+  particles_05um = (uint16_t)round(particles05umAvg);
+  particles_10um = (uint16_t)round(particles10umAvg);
+  particles_25um = (uint16_t)round(particles25umAvg);
+  particles_50um = (uint16_t)round(particles50umAvg);
+  particles_100um = (uint16_t)round(particles100umAvg);
+
   // Debug output
-  debugPrint("Averaged PM10 (standard): "); debugPrintln(pm10StandardAvg);
-  debugPrint("Averaged PM2.5 (standard): "); debugPrintln(pm25StandardAvg);
-  debugPrint("Averaged PM100 (standard): "); debugPrintln(pm100StandardAvg);
+  debugPrint("Averaged PM10 (standard): "); debugPrintln(pm10_standard);
+  debugPrint("Averaged PM2.5 (standard): "); debugPrintln(pm25_standard);
+  debugPrint("Averaged PM100 (standard): "); debugPrintln(pm100_standard);
 
-  debugPrint("Averaged PM10 (environmental): "); debugPrintln(pm10EnvAvg);
-  debugPrint("Averaged PM2.5 (environmental): "); debugPrintln(pm25EnvAvg);
-  ("Averaged PM100 (environmental): "); debugPrintln(pm100EnvAvg);
+  debugPrint("Averaged PM10 (environmental): "); debugPrintln(pm10_env);
+  debugPrint("Averaged PM2.5 (environmental): "); debugPrintln(pm25_env);
+  ("Averaged PM100 (environmental): "); debugPrintln(pm100_env);
 
-  debugPrint("Averaged Particles > 0.3um: "); debugPrintln(particles03umAvg);
-  debugPrint("Averaged Particles > 0.5um: "); debugPrintln(particles05umAvg);
-  debugPrint("Averaged Particles > 1.0um: "); debugPrintln(particles10umAvg);
-  debugPrint("Averaged Particles > 2.5um: "); debugPrintln(particles25umAvg);
-  debugPrint("Averaged Particles > 5.0um: "); debugPrintln(particles50umAvg);
-  debugPrint("Averaged Particles > 50um: "); debugPrintln(particles100umAvg);
+  debugPrint("Averaged Particles > 0.3um: "); debugPrintln(particles_03um);
+  debugPrint("Averaged Particles > 0.5um: "); debugPrintln(particles_05um);
+  debugPrint("Averaged Particles > 1.0um: "); debugPrintln(particles_10um);
+  debugPrint("Averaged Particles > 2.5um: "); debugPrintln(particles_25um);
+  debugPrint("Averaged Particles > 5.0um: "); debugPrintln(particles_50um);
+  debugPrint("Averaged Particles > 50um: "); debugPrintln(particles_100um);
 }
 
 void Set_Time_Location(J *rsp)
