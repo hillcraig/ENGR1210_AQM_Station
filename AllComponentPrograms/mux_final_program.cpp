@@ -29,7 +29,7 @@ void Read_INA260();
 void Read_PM25AQI();
 void Send_Data();
 void Set_Time_Location(J *rsp);
-void SetNotecardToOffMode();
+void SetLocationToOffMode();
 template <typename T>
 void debugPrint(T message);
 template <typename T>
@@ -117,13 +117,22 @@ void setup()
   {  
     J *req = notecard.newRequest("hub.set");
     JAddStringToObject(req, "product", productUID);
-    JAddStringToObject(req, "mode", "off");  // off communication mode
+    JAddStringToObject(req, "mode", "periodic");  // periodic communication mode
     if (!notecard.sendRequest(req)) {
       JDelete(req);  // Delete the request if sending fails
     }
   }
 
+  // Perform an immediate sync to fetch the current time and update settings
+  {
+    J *req = notecard.newRequest("hub.sync");
+    if (!notecard.sendRequest(req)) {
+      debugPrintln("Failed to perform initial hub sync\n");
+    }
+  }
+
 }
+
 
 void loop()
 {
@@ -189,7 +198,7 @@ void Notecard_Find_Location()
         NoteDeleteResponse(rsp);
       }
 
-      SetNotecardToOffMode();  // Ensure system is returned to off mode
+      SetLocationToOffMode();  // Ensure system is returned to off mode
       break;
     }
 
@@ -201,7 +210,7 @@ void Notecard_Find_Location()
         Set_Time_Location(rsp);
         NoteDeleteResponse(rsp);
 
-        SetNotecardToOffMode();  // Ensure system is returned to off mode
+        SetLocationToOffMode();  // Ensure system is returned to off mode
         break;  // Exit loop once location is updated
       }
 
@@ -209,7 +218,7 @@ void Notecard_Find_Location()
         debugPrintln("Found a stop flag, cannot find location\n");
         NoteDeleteResponse(rsp);
 
-        SetNotecardToOffMode();  // Ensure system is returned to off mode
+        SetLocationToOffMode();  // Ensure system is returned to off mode
         break;
       }
 
@@ -220,7 +229,7 @@ void Notecard_Find_Location()
   }
 }
 
-void SetNotecardToOffMode() {
+void SetLocationToOffMode() {
   J *req = notecard.newRequest("card.location.mode");
   if (req != NULL) {
     JAddStringToObject(req, "mode", "off");
