@@ -9,7 +9,7 @@
 
 #define productUID "edu.umn.d.cshill:engr_1210_fall_2024"  // Product UID for Notecard
 
-#define DEBUG 1
+#define DEBUG 0
 
 #define INA260_MUX_PORT 0
 #define AHTX0_MUX_PORT 1
@@ -117,17 +117,9 @@ void setup()
   {  
     J *req = notecard.newRequest("hub.set");
     JAddStringToObject(req, "product", productUID);
-    JAddStringToObject(req, "mode", "periodic");  // periodic communication mode
+    JAddStringToObject(req, "mode", "off");  // off communication mode
     if (!notecard.sendRequest(req)) {
       JDelete(req);  // Delete the request if sending fails
-    }
-  }
-
-  // Perform an immediate sync to fetch the current time and update settings
-  {
-    J *req = notecard.newRequest("hub.sync");
-    if (!notecard.sendRequest(req)) {
-      debugPrintln("Failed to perform initial hub sync\n");
     }
   }
 
