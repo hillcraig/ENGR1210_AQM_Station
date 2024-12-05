@@ -29,7 +29,7 @@ void Read_INA260();
 void Read_PM25AQI();
 void Send_Data();
 void Set_Time_Location(J *rsp);
-void SetLocationToOffMode();
+void SetNotecardToOffMode();
 template <typename T>
 void debugPrint(T message);
 template <typename T>
@@ -66,7 +66,6 @@ uint16_t particles_100um;
 
 void setup()
 {
-
   delay(2000);  // Initial delay to allow peripherals to stabilize
   Serial.begin(115200);  // Initialize serial for debugging
 
@@ -133,28 +132,44 @@ void setup()
 
 }
 
-
 void loop()
 {
-  unsigned long startTime = millis();  // Record the start time
+  // Fetch the Notecard's current time
+  unsigned long notecardTime = 0;
+  {
+    J *rsp = notecard.requestAndResponse(notecard.newRequest("card.time"));
+    if (rsp != NULL) {
+      notecardTime = JGetInt(rsp, "time");  // Get the Notecard's current timestamp (UTC)
+      NoteDeleteResponse(rsp);
+    } else {
+      debugPrintln("Failed to get Notecard time. Retrying...\n");
+      delay(1000);  // Retry after a delay
+      return;
+    }
+  }
 
-  // Execute the tasks: location and sensor readings
-  Notecard_Find_Location();
+  debugPrintln("Waiting until the next 15-minute mark.");
+  // Calculate seconds until the next 15-minute mark
+  unsigned long secondsUntilNextMark = (900 - (notecardTime % 900));  // 900 seconds = 15 minutes
+
+  // Busy wait until the next 15-minute mark
+  unsigned long startWaitTime = millis();  // Record the start time of waiting
+  unsigned long waitTimeMs = secondsUntilNextMark * 1000;  // Convert to milliseconds
+  while (millis() - startWaitTime < waitTimeMs) {
+    // Actively wait for the duration to pass
+  }
+  debugPrintln("Reached the 15-minute mark. Starting tasks.");
+
+  // Execute tasks on the exact mark
   myMux.setPort(INA260_MUX_PORT);
   Read_INA260();
   myMux.setPort(PM25AQI_MUX_PORT);
   Read_PM25AQI();
   myMux.setPort(AHTX0_MUX_PORT);
   Read_AHTX0();
+  Notecard_Find_Location();
   Send_Data();
-
-  // Spin the CPU until 15 minutes (900,000 ms) have passed
-  while (millis() - startTime < 900000)
-  {
-    // Busy-wait to ensure the loop runs for exactly 15 minutes
-  }
 }
-
 
 void Notecard_Find_Location()
 {
@@ -198,7 +213,7 @@ void Notecard_Find_Location()
         NoteDeleteResponse(rsp);
       }
 
-      SetLocationToOffMode();  // Ensure system is returned to off mode
+      SetNotecardToOffMode();  // Ensure system is returned to off mode
       break;
     }
 
@@ -210,7 +225,7 @@ void Notecard_Find_Location()
         Set_Time_Location(rsp);
         NoteDeleteResponse(rsp);
 
-        SetLocationToOffMode();  // Ensure system is returned to off mode
+        SetNotecardToOffMode();  // Ensure system is returned to off mode
         break;  // Exit loop once location is updated
       }
 
@@ -218,7 +233,7 @@ void Notecard_Find_Location()
         debugPrintln("Found a stop flag, cannot find location\n");
         NoteDeleteResponse(rsp);
 
-        SetLocationToOffMode();  // Ensure system is returned to off mode
+        SetNotecardToOffMode();  // Ensure system is returned to off mode
         break;
       }
 
@@ -229,7 +244,7 @@ void Notecard_Find_Location()
   }
 }
 
-void SetLocationToOffMode() {
+void SetNotecardToOffMode() {
   J *req = notecard.newRequest("card.location.mode");
   if (req != NULL) {
     JAddStringToObject(req, "mode", "off");
