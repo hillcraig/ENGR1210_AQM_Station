@@ -29,6 +29,7 @@ void Read_INA260();
 void Read_PM25AQI();
 void Send_Data();
 void Set_Time_Location(J *rsp);
+void SetNotecardToOffMode();
 template <typename T>
 void debugPrint(T message);
 template <typename T>
@@ -116,28 +117,7 @@ void setup()
   {  
     J *req = notecard.newRequest("hub.set");
     JAddStringToObject(req, "product", productUID);
-    JAddStringToObject(req, "mode", "periodic");  // Periodic communication mode
-    JAddNumberToObject(req, "inbound", 60 * 12);  // Set inbound interval (12 minutes)
-    JAddNumberToObject(req, "outbound", 30);  // Set outbound interval (30 seconds)
-    if (!notecard.sendRequest(req)) {
-      JDelete(req);  // Delete the request if sending fails
-    }
-  }
-
-  // Enable DFU (Device Firmware Update) mode on the Notecard
-  {
-    J *req = notecard.newRequest("card.aux");
-    JAddStringToObject(req, "mode", "dfu");  // Set auxiliary card mode to DFU
-    if (!notecard.sendRequest(req)) {
-      JDelete(req);  // Delete the request if sending fails
-    }
-  }
-
-  // Set up periodic location tracking (every 5 minutes)
-  {
-    J *req = notecard.newRequest("card.location.mode");
-    JAddStringToObject(req, "mode", "periodic");
-    JAddNumberToObject(req, "seconds", 60 * 5);  // Set location interval to 5 minutes
+    JAddStringToObject(req, "mode", "off");  // off communication mode
     if (!notecard.sendRequest(req)) {
       JDelete(req);  // Delete the request if sending fails
     }
@@ -166,58 +146,89 @@ void loop()
   }
 }
 
+
 void Notecard_Find_Location()
 {
-  size_t gps_time_s;
+  size_t gps_time_s = 0;
+  const size_t timeout_s = 600;  // 10-minute timeout for finding a location
 
-  // Fetch the current location from the Notecard
+  // Fetch the current location time
   {
     J *rsp = notecard.requestAndResponse(notecard.newRequest("card.location"));
-    gps_time_s = JGetInt(rsp, "time");  // Get the GPS time
-    NoteDeleteResponse(rsp);
+    if (rsp != NULL) {
+      gps_time_s = JGetInt(rsp, "time");  // Get the GPS time
+      NoteDeleteResponse(rsp);
+    } else {
+      debugPrintln("Failed to fetch initial location time\n");
+      return;  // Exit if we can't fetch the initial GPS time
+    }
   }
 
-  // Switch the Notecard to continuous location tracking mode
+  // Switch to continuous location tracking mode
   {
     J *req = notecard.newRequest("card.location.mode");
-    JAddStringToObject(req, "mode", "continuous");
-    notecard.sendRequest(req);
+    if (req != NULL) {
+      JAddStringToObject(req, "mode", "continuous");
+      if (!notecard.sendRequest(req)) {
+        debugPrintln("Failed to switch to continuous mode\n");
+        return;  // Exit if the mode change fails
+      }
+    }
   }
-
-  size_t timeout_s = 600;  // 10-minute timeout for finding a location
 
   // Poll for updated location data
   for (const size_t start_ms = ::millis();;) {
+    // Check for timeout
     if (::millis() >= (start_ms + (timeout_s * 1000))) {
       debugPrintln("Timed out looking for a location\n");
-      //set time before leaving
-      J *rsp = notecard.requestAndResponse(notecard.newRequest("card.time"));
-      Set_Time_Location(rsp);
-      NoteDeleteResponse(rsp);
-      break;  // Timeout reached, stop looking for location
-    }
-  
-    J *rsp = notecard.requestAndResponse(notecard.newRequest("card.location"));
-    if (JGetInt(rsp, "time") != gps_time_s) {  // Check if GPS time has updated
-      Set_Time_Location(rsp);  // If updated, set the time and location
-      NoteDeleteResponse(rsp);
 
-      // Switch the Notecard back to periodic location mode
-      {
-        J *req = notecard.newRequest("card.location.mode");
-        JAddStringToObject(req, "mode", "periodic");
-        notecard.sendRequest(req);
+      // Set time before exiting
+      J *rsp = notecard.requestAndResponse(notecard.newRequest("card.time"));
+      if (rsp != NULL) {
+        Set_Time_Location(rsp);
+        NoteDeleteResponse(rsp);
       }
+
+      SetNotecardToOffMode();  // Ensure system is returned to off mode
       break;
     }
-  
-    if (JGetObjectItem(rsp, "stop")) {  // If stop flag is found, break out
-      debugPrintln("Found a stop flag, cannot find location\n");
-      break;
+
+    // Fetch current location data
+    J *rsp = notecard.requestAndResponse(notecard.newRequest("card.location"));
+    if (rsp != NULL) {
+      if (JGetInt(rsp, "time") != gps_time_s) {
+        // Location updated, process new data
+        Set_Time_Location(rsp);
+        NoteDeleteResponse(rsp);
+
+        SetNotecardToOffMode();  // Ensure system is returned to off mode
+        break;  // Exit loop once location is updated
+      }
+
+      if (JGetObjectItem(rsp, "stop")) {  // Check for a "stop" flag
+        debugPrintln("Found a stop flag, cannot find location\n");
+        NoteDeleteResponse(rsp);
+
+        SetNotecardToOffMode();  // Ensure system is returned to off mode
+        break;
+      }
+
+      NoteDeleteResponse(rsp);  // Clean up response
     }
-  
-    NoteDeleteResponse(rsp);
-    delay(2000);  // Wait 2 seconds between location requests
+
+    delay(2000);  // Wait 2 seconds before polling again
+  }
+}
+
+void SetNotecardToOffMode() {
+  J *req = notecard.newRequest("card.location.mode");
+  if (req != NULL) {
+    JAddStringToObject(req, "mode", "off");
+    if (!notecard.sendRequest(req)) {
+      debugPrintln("Failed to set Notecard to off mode\n");
+    }
+  } else {
+    debugPrintln("Failed to create off mode request\n");
   }
 }
 
@@ -371,7 +382,7 @@ void Read_PM25AQI()
 
   debugPrint("Averaged PM10 (environmental): "); debugPrintln(pm10_env);
   debugPrint("Averaged PM2.5 (environmental): "); debugPrintln(pm25_env);
-  ("Averaged PM100 (environmental): "); debugPrintln(pm100_env);
+  debugPrint("Averaged PM100 (environmental): "); debugPrintln(pm100_env);
 
   debugPrint("Averaged Particles > 0.3um: "); debugPrintln(particles_03um);
   debugPrint("Averaged Particles > 0.5um: "); debugPrintln(particles_05um);
@@ -388,9 +399,7 @@ void Set_Time_Location(J *rsp)
   rawtime = JGetNumber(rsp, "time");  
 
   lon = JGetNumber(rsp, "lon"); 
-  lon = (floor(100000*lon)/100000);  // Truncate longitude to 5 decimal places
   lat = JGetNumber(rsp, "lat");
-  lat = (floor(100000*lat)/100000);  // Truncate latitude to 5 decimal places
 
   struct tm  ts;  
   ts = *localtime(&rawtime);  // Convert raw time to local time
