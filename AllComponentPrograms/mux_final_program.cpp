@@ -190,6 +190,10 @@ void Notecard_Find_Location()
   for (const size_t start_ms = ::millis();;) {
     if (::millis() >= (start_ms + (timeout_s * 1000))) {
       debugPrintln("Timed out looking for a location\n");
+      //set time before leaving
+      J *rsp = notecard.requestAndResponse(notecard.newRequest("card.time"));
+      Set_Time_Location(rsp);
+      NoteDeleteResponse(rsp);
       break;  // Timeout reached, stop looking for location
     }
   
@@ -242,13 +246,15 @@ void Read_AHTX0()
 
   // Store the averaged values in global variables
   temperature = temperatureAvg;
+  temperature = round(temperature * pow(10, 2)) / pow(10, 2);  // Truncate longitude to 2 decimal places
   humidity = humidityAvg;
+  humidity = round(humidity * pow(10, 2)) / pow(10, 2);  // Truncate longitude to 2 decimal places
 
   // Debug output
   debugPrint("Averaged Temperature: ");
-  debugPrintln(temperatureAvg);
+  debugPrintln(temperature);
   debugPrint("Averaged Humidity: ");
-  debugPrintln(humidityAvg);
+  debugPrintln(humidity);
 }
 
 void Read_INA260()
